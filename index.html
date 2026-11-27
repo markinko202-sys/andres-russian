@@ -213,6 +213,15 @@ header#top,nav{border-bottom:1px solid var(--line)!important}nav#nav{border-righ
 .hg{display:none!important}html[data-rm="off"] .rm{display:none!important}
 .rm{color:var(--lav2);font-size:13px;font-weight:700;letter-spacing:.02em}.fc .rm{font-size:15px}
 .col{display:flex;flex-direction:column}
+.chips#decks{display:block}
+.ltabs{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.lt2{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:10px 14px 10px 16px;display:flex;flex-direction:column;align-items:flex-start;cursor:pointer;min-width:150px;position:relative;font:700 16px 'Inter',sans-serif;box-shadow:0 3px 0 var(--line)}
+.lt2 small{font-weight:600;color:var(--muted);font-size:12px}.lt2 i{position:absolute;right:12px;top:12px;font-style:normal;color:var(--muted);transition:.2s}
+.lt2.has{border-color:var(--rose)}.lt2.open{background:var(--rose);border-color:var(--rose);color:#fff}.lt2.open small,.lt2.open i{color:#fff;opacity:.85}.lt2.open i{transform:rotate(180deg)}
+.lpanel{border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:8px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px}
+.lpi{display:flex;gap:10px;align-items:center;padding:9px 12px;border-radius:10px;cursor:pointer;font-weight:600}.lpi:hover{background:var(--blush)}
+.lpi i{flex:0 0 20px;height:20px;border:2px solid var(--line);border-radius:6px;background:var(--card)}.lpi.on i{background:var(--rose);border-color:var(--rose);box-shadow:inset 0 0 0 3px var(--card)}
+.lpi small{color:var(--muted);font-weight:600;margin-left:4px}.lpi.full{grid-column:1/-1;background:var(--blush)}
 </style></head><body>
 <svg width="0" height="0" style="position:absolute"><filter id="sk"><feTurbulence type="fractalNoise" baseFrequency=".035" numOctaves="2" seed="4"/><feDisplacementMap in="SourceGraphic" scale="2.6"/></filter></svg>
 
@@ -625,12 +634,21 @@ function openHw(hi){
 let selDecks=new Set(store.get('decksel',['l2s0'])),mode=store.get('mode','flash'),dir=store.get('dir','f');
 const MODES=[['flash','Flashcards','Tarjetas','Flip and check'],['quiz','Quiz','Test','Pick the answer'],['match','Match','Unir','Pairs, tap tap'],['build','Build the phrase','Forma la frase','Put words in order']];
 function drawPick(){
- decks.innerHTML=DECKS.map(d=>`<button class="chip ${selDecks.has(d.id)?'on':''}" data-d="${d.id}">Lesson ${d.lesson} · ${d.title}<small>${d.cards.length} cards <span class="zh">${d.zh}</span></small></button>`).join('');
+ drawLessonPick();
  modes.innerHTML=MODES.map(m=>`<div class="mode ${mode==m[0]?'on':''}" data-m="${m[0]}">${m[1]}<small>${m[3]} <span class="zh">${m[2]}</span></small></div>`).join('');
  dirs.innerHTML=[['f','Russian first'],['b','English first']].map(x=>`<button class="chip ${dir==x[0]?'on':''}" data-r="${x[0]}">${x[1]}</button>`).join('');
  deckCount.textContent=pool().length+' cards selected'}
 const pool=()=>DECKS.filter(d=>selDecks.has(d.id)).flatMap(d=>d.cards.map(c=>Object.assign({deck:d.id},c)));
-decks.onclick=e=>{const b=e.target.closest('[data-d]');if(!b)return;const id=b.dataset.d;selDecks.has(id)?selDecks.delete(id):selDecks.add(id);store.set('decksel',[...selDecks]);drawPick()};
+let openL=store.get('openL',0);
+function drawLessonPick(){
+ const Ls=uniq(DECKS.map(d=>d.lesson));
+ const tabs=Ls.map(n=>{const ds=DECKS.filter(d=>d.lesson==n),k=ds.filter(d=>selDecks.has(d.id)).length;return `<button class="lt2 ${openL==n?'open':''} ${k?'has':''}" data-l="${n}"><b>Lesson ${n}</b><small>${k?k+' of '+ds.length+' selected':ds.length+' parts'}</small><i>▾</i></button>`}).join('');
+ let panel='';
+ if(openL){const ds=DECKS.filter(d=>d.lesson==openL),all=ds.every(d=>selDecks.has(d.id));
+  panel=`<div class="lpanel"><label class="lpi full ${all?'on':''}" data-all="${openL}"><i></i><span><b>Full lesson ${openL}</b> <small>${ds.reduce((a,d)=>a+d.cards.length,0)} cards</small></span></label>`+ds.map(d=>`<label class="lpi ${selDecks.has(d.id)?'on':''}" data-d="${d.id}"><i></i><span>${d.title} <small>${d.cards.length} cards</small></span></label>`).join('')+'</div>'}
+ decks.innerHTML=`<div class="ltabs">${tabs}</div>${panel}`}
+decks.onclick=e=>{const a=e.target.closest('[data-all]');if(a){const ds=DECKS.filter(d=>d.lesson==a.dataset.all),all=ds.every(d=>selDecks.has(d.id));ds.forEach(d=>all?selDecks.delete(d.id):selDecks.add(d.id));store.set('decksel',[...selDecks]);drawPick();return}const l=e.target.closest('[data-l]');if(l){openL=openL==l.dataset.l?0:+l.dataset.l;store.set('openL',openL);drawPick();return}if(0)0;
+ const b=e.target.closest('[data-d]');if(!b)return;const id=b.dataset.d;selDecks.has(id)?selDecks.delete(id):selDecks.add(id);store.set('decksel',[...selDecks]);drawPick()};
 modes.onclick=e=>{const b=e.target.closest('[data-m]');if(!b)return;mode=b.dataset.m;store.set('mode',mode);drawPick()};
 dirs.onclick=e=>{const b=e.target.closest('[data-r]');if(!b)return;dir=b.dataset.r;store.set('dir',dir);drawPick()};
 allDecks.onclick=()=>{selDecks=new Set(DECKS.filter(d=>!d.bonus).map(d=>d.id));store.set('decksel',[...selDecks]);drawPick()};
